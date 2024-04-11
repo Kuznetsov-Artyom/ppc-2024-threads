@@ -16,29 +16,29 @@ list_of_type_of_tasks = ["omp", "seq", "stl", "tbb"]
 result_tables = {"pipeline": {}, "task_run": {}}
 set_of_task_name = []
 
-logs_file = open(logs_path, "r")
-logs_lines = logs_file.readlines()
-for line in logs_lines:
-    pattern = r'tasks[\/|\\](\w*)[\/|\\](\w*):(\w*):(-*\d*\.\d*)'
-    result = re.findall(pattern, line)
-    if len(result):
-        task_name = result[0][1]
-        perf_type = result[0][2]
-        set_of_task_name.append(task_name)
-        result_tables[perf_type][task_name] = {}
+with open(logs_path, "r") as logs_file:
+    logs_lines = logs_file.readlines()
+    for line in logs_lines:
+        pattern = r'tasks[\/|\\](\w*)[\/|\\](\w*):(\w*):(-*\d*\.\d*)'
+        result = re.findall(pattern, line)
+        if len(result):
+            task_name = result[0][1]
+            perf_type = result[0][2]
+            set_of_task_name.append(task_name)
+            result_tables[perf_type][task_name] = {}
 
-        for ttype in list_of_type_of_tasks:
-            result_tables[perf_type][task_name][ttype] = -1.0
+            for ttype in list_of_type_of_tasks:
+                result_tables[perf_type][task_name][ttype] = -1.0
 
-for line in logs_lines:
-    pattern = r'tasks[\/|\\](\w*)[\/|\\](\w*):(\w*):(-*\d*\.\d*)'
-    result = re.findall(pattern, line)
-    if len(result):
-        task_type = result[0][0]
-        task_name = result[0][1]
-        perf_type = result[0][2]
-        perf_time = float(result[0][3])
-        result_tables[perf_type][task_name][task_type] = perf_time
+    for line in logs_lines:
+        pattern = r'tasks[\/|\\](\w*)[\/|\\](\w*):(\w*):(-*\d*\.\d*)'
+        result = re.findall(pattern, line)
+        if len(result):
+            task_type = result[0][0]
+            task_name = result[0][1]
+            perf_type = result[0][2]
+            perf_time = float(result[0][3])
+            result_tables[perf_type][task_name][task_type] = perf_time
 
 
 for table_name in result_tables:
@@ -72,10 +72,13 @@ for table_name in result_tables:
     right_border = workbook.add_format({'right': 2})
     for task_name in list(set(set_of_task_name)):
         for type_of_task in list_of_type_of_tasks:
-            par_time = result_tables[table_name][task_name][type_of_task]
+            if task_name in result_tables[table_name] and type_of_task in result_tables[table_name][task_name]:
+                par_time = result_tables[table_name][task_name][type_of_task]
+            else:
+                par_time = None  # Или любое другое значение по умолчанию
             seq_time = result_tables[table_name][task_name]["seq"]
-            speed_up = seq_time / par_time
-            efficiency = speed_up / cpu_num
+            speed_up = seq_time / par_time if par_time is not None else None
+            efficiency = speed_up / cpu_num if speed_up is not None else None
             worksheet.write(it_j, it_i, par_time)
             it_i += 1
             worksheet.write(it_j, it_i, speed_up)
